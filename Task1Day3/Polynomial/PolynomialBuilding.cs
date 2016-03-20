@@ -2,16 +2,19 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
+
+
 namespace Polynomial
 {
-    public class PolynomialBuilding
+    public sealed class PolynomialBuilding
     {
         private readonly Polynom[] polynom;
-
+        const double Eps = 00000.1;
         public struct Polynom
         {
             public double Coefficient;
@@ -20,15 +23,14 @@ namespace Polynomial
             public Polynom(double coefficient, int power)
             {
                 Coefficient = coefficient;
-                Power = power;
+                Power = power;               
             }
         }
 
         public PolynomialBuilding(double coefficient, int power)
         {
-            double eps = 000000.1;
             polynom = new Polynom[power+1];
-            if (Math.Abs(coefficient)>eps)
+            if (Math.Abs(coefficient)>Eps)
                 polynom[power] = new Polynom(coefficient,power);
             else
                 polynom[0] = new Polynom();
@@ -37,16 +39,12 @@ namespace Polynomial
 
         public PolynomialBuilding(params double[] coefficient)
         {
-            double eps = 000000.1;
             polynom = new Polynom[coefficient.Length];
             for (int i = 0; i < coefficient.Length; i++)
-                if (coefficient[i]>eps)
+                if (coefficient[i]>Eps)
                     polynom[i] = new Polynom(coefficient[i],i);
                 else
-                    polynom[i] = new Polynom();
-            
-
-
+                    polynom[i] = new Polynom();            
         }
 
         public override string ToString()
@@ -54,7 +52,7 @@ namespace Polynomial
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < this.polynom.Length; i++)
             {
-                if (this.polynom[i].Coefficient != 0)
+                if (!(this.polynom[i].Coefficient < 0+Eps && this.polynom[i].Coefficient > 0 -Eps))
                 {
                     if (polynom[i].Coefficient > 0)
                         sb.Append('+');
@@ -65,7 +63,6 @@ namespace Polynomial
                     else
                     sb.AppendFormat("{0}x^{1}", this.polynom[i].Coefficient, this.polynom[i].Power);
                 }
-
             }
             if (sb[0] == '+')
                 sb.Remove(0, 1);
@@ -74,7 +71,6 @@ namespace Polynomial
 
         private PolynomialBuilding(Polynom[] values)
         {
-            double eps = 000000.1;
             if (values == null)
             {
                 throw new ArgumentNullException();
@@ -85,11 +81,9 @@ namespace Polynomial
             }
             polynom = new Polynom[values.Length];
             for (int i = 0; i < values.Length; i++)
-                if (Math.Abs(values[i].Coefficient) > eps)
+                if (Math.Abs(values[i].Coefficient) > Eps)
                     polynom[i] = values[i];                     
         }
-
-
 
         public double Calculate(double x)
         {
@@ -101,8 +95,6 @@ namespace Polynomial
             for (int i = 0; i < this.polynom.Length; i++)
             {
                 value += Math.Pow(x, i)*this.polynom[i].Coefficient;
-                //x = this.polynom[i].Coefficient*x;
-                //value += Math.Pow(x, i);
             }
             return value;
         }
@@ -116,7 +108,6 @@ namespace Polynomial
             int lastPow = Math.Max(first.polynom.Length, second.polynom.Length);
             Polynom[] resultPolynom = new Polynom[lastPow];
 
-            ///List< Polynom > resPolynoms = new List<Polynom>();
             for (int i = 0; i < first.polynom.Length; i++)
                 resultPolynom[i].Coefficient = first.polynom[i].Coefficient;
 
@@ -124,10 +115,9 @@ namespace Polynomial
                 resultPolynom[i].Coefficient += second.polynom[i].Coefficient;
 
             for (int i=0; i<lastPow; i++)
-                if (resultPolynom[i].Coefficient != 0)
-                    resultPolynom[i].Power = i;
-           
-            
+                if (!(resultPolynom[i].Coefficient < 0+Eps && resultPolynom[i].Coefficient >0-Eps))
+                    resultPolynom[i].Power = i; 
+                                  
             return new PolynomialBuilding(resultPolynom);
         }
 
@@ -144,7 +134,7 @@ namespace Polynomial
                 resultPolynom[i].Coefficient -= second.polynom[i].Coefficient;
 
             for (int i = 0; i < lastPow; i++)
-                if (resultPolynom[i].Coefficient != 0)
+                if (!(resultPolynom[i].Coefficient < 0 + Eps && resultPolynom[i].Coefficient > 0 - Eps))
                     resultPolynom[i].Power = i;
 
             return new PolynomialBuilding(resultPolynom);
@@ -155,39 +145,38 @@ namespace Polynomial
         {
             if (first == null || second == null)
                 throw new NullReferenceException();
-            int lastPow = Math.Max(first.polynom.Length, second.polynom.Length);
             Polynom[] resultPolynom = new Polynom[first.polynom.Length+second.polynom.Length-1];
             for (int i = 0; i < first.polynom.Length; i++)
                 for (int j = 0; j < second.polynom.Length; j++)
                     resultPolynom[i + j].Coefficient += first.polynom[i].Coefficient*second.polynom[j].Coefficient;
 
             for (int i=0; i<resultPolynom.Length; i++)
-                if (resultPolynom[i].Coefficient != 0)
+                if (!(resultPolynom[i].Coefficient < 0 + Eps && resultPolynom[i].Coefficient > 0 - Eps))
                     resultPolynom[i].Power = i;
             return new PolynomialBuilding(resultPolynom);
-
         }
 
-        
+
+
+        public static bool operator ==(PolynomialBuilding lhs, PolynomialBuilding rhs)
+        {
+            if (ReferenceEquals(lhs, rhs)) return true;
+            if (ReferenceEquals(lhs, null)) return false;
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(PolynomialBuilding lhs, PolynomialBuilding rhs)
+        {
+            return !(lhs == rhs);
+        }
+
 
         public override bool Equals(object obj)
         {
-            if(ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
-            if (ReferenceEquals(obj, null))
-            {
-                return false;
-            }
-
+            if (ReferenceEquals(this, obj)) return true;
+            if (ReferenceEquals(obj, null)) return false;  
             PolynomialBuilding polynom = obj as PolynomialBuilding;
-            if (polynom == null)
-            {
-                return false;
-            }
-
+            if (polynom == null) return false;
             return Equals(polynom);
         }
 
@@ -197,13 +186,14 @@ namespace Polynomial
                 return false;
             if (ReferenceEquals(this, otherPolynom))
                 return true;
-            return this.polynom.Length == otherPolynom.polynom.Length &&
-                   this.polynom.SequenceEqual(otherPolynom.polynom);
+            return (this.polynom.Length == otherPolynom.polynom.Length &&
+                   this.polynom.SequenceEqual(otherPolynom.polynom));
         }
 
         public override int GetHashCode()
         {
-            return base.GetHashCode();
+            return this.polynom.GetHashCode();
+            //return base.GetHashCode();
         }
     }
 }
